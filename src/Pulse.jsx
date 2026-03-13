@@ -1,5 +1,15 @@
-import { useState, useEffect, useRef } from 'react';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { useState, useEffect, useRef } from "react";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+
+function useWindowSize() {
+  const [size, setSize] = useState({ width: typeof window !== "undefined" ? window.innerWidth : 1200 });
+  useEffect(() => {
+    const onResize = () => setSize({ width: window.innerWidth });
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return size;
+}
 
 const PRODUCTS = {
   "Nike Air Max 2025": {
@@ -222,18 +232,25 @@ const LIVE_STATUS_ROTATE = [
   ["Seeding population (n=200)...", "Evaluating fitness...", "Running crossover...", "Applying mutation...", "Selecting next generation..."]
 ];
 
+const MOBILE_BP = 768;
+const SMALL_MOBILE_BP = 480;
+
 export default function Pulse() {
-  const [screen, setScreen] = useState('landing');
-  const [productName, setProductName] = useState('');
-  const [query, setQuery] = useState('');
+  const { width } = useWindowSize();
+  const isMobile = width <= MOBILE_BP;
+  const isSmallMobile = width <= SMALL_MOBILE_BP;
+
+  const [screen, setScreen] = useState("landing");
+  const [productName, setProductName] = useState("");
+  const [query, setQuery] = useState("");
   const [productData, setProductData] = useState(null);
-  const [timeRange, setTimeRange] = useState('30d');
+  const [timeRange, setTimeRange] = useState("30d");
   const [signalIndex, setSignalIndex] = useState(0);
   const [cardsVisible, setCardsVisible] = useState(false);
-  const [fadeState, setFadeState] = useState('in');
+  const [fadeState, setFadeState] = useState("in");
   const [agentStep, setAgentStep] = useState(-1);
-  const [typeText, setTypeText] = useState('');
-  const [stepDone, setStepDone] = useState([false,false,false,false]);
+  const [typeText, setTypeText] = useState("");
+  const [stepDone, setStepDone] = useState([false, false, false, false]);
   const [progress, setProgress] = useState(0);
   const [showBrief, setShowBrief] = useState(false);
   const [liveStatus, setLiveStatus] = useState("");
@@ -386,68 +403,217 @@ export default function Pulse() {
         .agent-active{animation:agentPulse 1.2s ease-in-out infinite}
         .sig-enter{animation:sigSlide 300ms ease forwards}
         @keyframes sigSlide{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+        @media (max-width:768px){
+          .pulse-landing-hero{font-size:26px !important;max-width:100% !important}
+          .pulse-footer-stats{flex-wrap:wrap;gap:8px;justify-content:center;text-align:center;padding:0 16px 20px !important;font-size:10px !important}
+        }
+        @media (max-width:480px){
+          .pulse-landing-hero{font-size:22px !important}
+          .pulse-input-wrap{flex-direction:column;max-width:100% !important}
+          .pulse-input-wrap input{border-radius:10px !important;border-right:1.5px solid #E8E0D0 !important}
+          .pulse-input-wrap button{border-radius:10px !important;width:100%}
+        }
       `}</style>
       <div className={fadeState === 'out' ? 'fade-out' : 'fade-in'} style={{minHeight:'100vh'}}>
 
-        {screen === 'landing' && (
-          <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'40px 48px',maxWidth:1200,margin:'0 auto',position:'relative'}}>
-            <div style={{position:'fixed',top:28,left:36,display:'flex',alignItems:'center',gap:6}}>
-              <span style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:20}}>pulse</span>
-              <span className="pdot" style={{width:7,height:7}}/>
+        {screen === "landing" && (
+          <div
+            style={{
+              minHeight: "100vh",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: isSmallMobile ? "24px 16px" : isMobile ? "32px 24px" : "40px 48px",
+              maxWidth: 1200,
+              margin: "0 auto",
+              position: "relative",
+            }}
+          >
+            <div
+              style={{
+                position: "fixed",
+                top: isMobile ? 16 : 28,
+                left: isMobile ? 20 : 36,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <span style={{ fontFamily: "Syne,sans-serif", fontWeight: 700, fontSize: isMobile ? 18 : 20 }}>pulse</span>
+              <span className="pdot" style={{ width: 7, height: 7 }} />
             </div>
-            <h1 style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:42,textAlign:'center',lineHeight:1.2,maxWidth:560,color:'#1A1714'}}>What did the world think of your product today?</h1>
-            <p style={{fontFamily:'Lora,serif',fontStyle:'italic',fontSize:17,color:'#6B6560',marginTop:16,textAlign:'center'}}>Track mentions, sentiment, and decisions across every channel.</p>
-            <div style={{display:'flex',width:'100%',maxWidth:520,marginTop:32}}>
-              <input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&query.trim())startAnalysis(query.trim())}}
-                placeholder="Enter your product name..." style={{flex:1,padding:'0 20px',height:52,fontSize:14,fontFamily:'DM Mono,monospace',border:'1.5px solid #E8E0D0',borderRight:'none',borderRadius:'10px 0 0 10px',background:'#FDFAF6',outline:'none',color:'#1A1714'}}
-                onFocus={e=>e.target.style.borderColor='#6B9E78'} onBlur={e=>e.target.style.borderColor='#E8E0D0'}/>
-              <button onClick={()=>{if(query.trim())startAnalysis(query.trim())}}
-                style={{padding:'0 24px',height:52,fontFamily:'Syne,sans-serif',fontWeight:600,fontSize:14,background:'#1A1714',color:'#fff',border:'none',borderRadius:'0 10px 10px 0',cursor:'pointer',whiteSpace:'nowrap'}}>Track →</button>
+            <h1
+              className="pulse-landing-hero"
+              style={{
+                fontFamily: "Syne,sans-serif",
+                fontWeight: 700,
+                fontSize: isSmallMobile ? 22 : isMobile ? 26 : 42,
+                textAlign: "center",
+                lineHeight: 1.2,
+                maxWidth: 560,
+                color: "#1A1714",
+              }}
+            >
+              What did the world think of your product today?
+            </h1>
+            <p
+              style={{
+                fontFamily: "Lora,serif",
+                fontStyle: "italic",
+                fontSize: isMobile ? 14 : 17,
+                color: "#6B6560",
+                marginTop: isMobile ? 12 : 16,
+                textAlign: "center",
+              }}
+            >
+              Track mentions, sentiment, and decisions across every channel.
+            </p>
+            <div className="pulse-input-wrap" style={{ display: "flex", width: "100%", maxWidth: 520, marginTop: isMobile ? 24 : 32 }}>
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && query.trim()) startAnalysis(query.trim());
+                }}
+                placeholder="Enter your product name..."
+                style={{
+                  flex: 1,
+                  padding: "0 16px",
+                  height: isMobile ? 48 : 52,
+                  fontSize: 14,
+                  fontFamily: "DM Mono,monospace",
+                  border: "1.5px solid #E8E0D0",
+                  borderRight: "none",
+                  borderRadius: "10px 0 0 10px",
+                  background: "#FDFAF6",
+                  outline: "none",
+                  color: "#1A1714",
+                }}
+                onFocus={(e) => (e.target.style.borderColor = "#6B9E78")}
+                onBlur={(e) => (e.target.style.borderColor = "#E8E0D0")}
+              />
+              <button
+                onClick={() => {
+                  if (query.trim()) startAnalysis(query.trim());
+                }}
+                style={{
+                  padding: "0 20px",
+                  height: isMobile ? 48 : 52,
+                  fontFamily: "Syne,sans-serif",
+                  fontWeight: 600,
+                  fontSize: 14,
+                  background: "#1A1714",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "0 10px 10px 0",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Track →
+              </button>
             </div>
-            <div style={{display:'flex',alignItems:'center',gap:8,marginTop:20,flexWrap:'wrap',justifyContent:'center'}}>
-              <span style={{fontSize:12,color:'#9C9490'}}>Try a demo:</span>
-              {PRODUCT_KEYS.map(n=>(
-                <button key={n} onClick={()=>{setQuery(n);startAnalysis(n)}}
-                  style={{padding:'7px 14px',fontSize:12,fontFamily:'Syne,sans-serif',fontWeight:600,border:'1px solid #E8E0D0',borderRadius:20,background:'transparent',cursor:'pointer',color:'#1A1714',transition:'background 200ms'}}
-                  onMouseEnter={e=>e.target.style.background='#F0EBE0'} onMouseLeave={e=>e.target.style.background='transparent'}>{n}</button>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                marginTop: isMobile ? 16 : 20,
+                flexWrap: "wrap",
+                justifyContent: "center",
+              }}
+            >
+              <span style={{ fontSize: isMobile ? 11 : 12, color: "#9C9490" }}>Try a demo:</span>
+              {PRODUCT_KEYS.map((n) => (
+                <button
+                  key={n}
+                  onClick={() => {
+                    setQuery(n);
+                    startAnalysis(n);
+                  }}
+                  style={{
+                    padding: "6px 12px",
+                    fontSize: isMobile ? 11 : 12,
+                    fontFamily: "Syne,sans-serif",
+                    fontWeight: 600,
+                    border: "1px solid #E8E0D0",
+                    borderRadius: 20,
+                    background: "transparent",
+                    cursor: "pointer",
+                    color: "#1A1714",
+                    transition: "background 200ms",
+                  }}
+                  onMouseEnter={(e) => (e.target.style.background = "#F0EBE0")}
+                  onMouseLeave={(e) => (e.target.style.background = "transparent")}
+                >
+                  {n}
+                </button>
               ))}
             </div>
-            <div style={{position:'fixed',bottom:32,left:0,right:0,display:'flex',gap:20,justifyContent:'center',fontSize:11,fontFamily:'DM Mono,monospace',color:'#9C9490'}}>
-              <span>24,831 signals processed</span><span>·</span><span>3 soft computing models active</span><span>·</span><span>Decision-ready in 4 seconds</span>
+            <div
+              className="pulse-footer-stats"
+              style={{
+                position: "fixed",
+                bottom: isMobile ? 16 : 32,
+                left: 0,
+                right: 0,
+                display: "flex",
+                gap: isMobile ? 8 : 20,
+                justifyContent: "center",
+                fontSize: isMobile ? 10 : 11,
+                fontFamily: "DM Mono,monospace",
+                color: "#9C9490",
+              }}
+            >
+              <span>24,831 signals processed</span>
+              <span>·</span>
+              <span>3 soft computing models active</span>
+              <span>·</span>
+              <span>Decision-ready in 4 seconds</span>
             </div>
           </div>
         )}
 
-        {screen === 'agent' && (
-          <div style={{minHeight:'100vh',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'40px 48px'}}>
-            <div style={{maxWidth:600,width:'100%'}}>
-              <div style={{display:'flex',alignItems:'center',gap:10}}>
-                <span style={{fontFamily:'DM Mono,monospace',fontSize:11,textTransform:'uppercase',letterSpacing:'1.5px',color:'#9C9490'}}>Analyzing</span>
-                <span style={{display:'inline-flex',alignItems:'center',gap:4,fontFamily:'DM Mono,monospace',fontSize:9,fontWeight:600,textTransform:'uppercase',letterSpacing:'1px',color:'#6B9E78',background:'#E8F0EA',padding:'3px 8px',borderRadius:4}}>
-                  <span className="pdot" style={{width:4,height:4}}/> Live
+        {screen === "agent" && (
+          <div
+            style={{
+              minHeight: "100vh",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: isSmallMobile ? "24px 16px" : isMobile ? "32px 20px" : "40px 48px",
+            }}
+          >
+            <div style={{ maxWidth: 600, width: "100%" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontFamily: "DM Mono,monospace", fontSize: isMobile ? 10 : 11, textTransform: "uppercase", letterSpacing: "1.5px", color: "#9C9490" }}>Analyzing</span>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontFamily: "DM Mono,monospace", fontSize: 9, fontWeight: 600, textTransform: "uppercase", letterSpacing: "1px", color: "#6B9E78", background: "#E8F0EA", padding: "3px 8px", borderRadius: 4 }}>
+                  <span className="pdot" style={{ width: 4, height: 4 }} /> Live
                 </span>
               </div>
-              <h2 style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:28,color:'#1A1714',marginTop:8}}>{productName}</h2>
-              <p style={{fontFamily:'Lora,serif',fontStyle:'italic',fontSize:14,color:'#6B6560',marginTop:8}}>Running soft computing pipeline...</p>
+              <h2 style={{ fontFamily: "Syne,sans-serif", fontWeight: 700, fontSize: isMobile ? 22 : 28, color: "#1A1714", marginTop: 8, wordBreak: "break-word" }}>{productName}</h2>
+              <p style={{ fontFamily: "Lora,serif", fontStyle: "italic", fontSize: isMobile ? 13 : 14, color: "#6B6560", marginTop: 8 }}>Running soft computing pipeline...</p>
               {liveStatus && (
-                <p style={{fontFamily:'DM Mono,monospace',fontSize:11,color:'#9C9490',marginTop:4,marginBottom:36,minHeight:16,transition:'opacity 200ms'}}>{liveStatus}</p>
+                <p style={{ fontFamily: "DM Mono,monospace", fontSize: isMobile ? 10 : 11, color: "#9C9490", marginTop: 4, marginBottom: isMobile ? 24 : 36, minHeight: 16, transition: "opacity 200ms" }}>{liveStatus}</p>
               )}
-              {!liveStatus && <div style={{marginBottom:36,minHeight:16}}/>}
-              {AGENT_STEPS.map((step,i) => (
-                <div key={i} style={{display:'flex',gap:16,alignItems:'flex-start',marginBottom:i<3?0:0,position:'relative'}}>
-                  {i < 3 && <div style={{position:'absolute',left:11,top:28,width:1,height:32,background:'#E8E0D0'}}/>}
-                  <div style={{flexShrink:0,marginTop:2}}>
+              {!liveStatus && <div style={{ marginBottom: isMobile ? 24 : 36, minHeight: 16 }} />}
+              {AGENT_STEPS.map((step, i) => (
+                <div key={i} style={{ display: "flex", gap: isMobile ? 12 : 16, alignItems: "flex-start", marginBottom: i < 3 ? 0 : 0, position: "relative" }}>
+                  {i < 3 && <div style={{ position: "absolute", left: 11, top: 28, width: 1, height: 32, background: "#E8E0D0" }} />}
+                  <div style={{ flexShrink: 0, marginTop: 2 }}>
                     {stepDone[i] ? (
-                      <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#6B9E78"/><path d="M8 12l3 3 5-5" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      <svg width={isMobile ? 20 : 24} height={isMobile ? 20 : 24} viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#6B9E78" /><path d="M8 12l3 3 5-5" stroke="#fff" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
                     ) : agentStep === i ? (
-                      <svg width="24" height="24" viewBox="0 0 24 24" className="agent-active"><circle cx="12" cy="12" r="10" fill="#C9A86B"/></svg>
+                      <svg width={isMobile ? 20 : 24} height={isMobile ? 20 : 24} viewBox="0 0 24 24" className="agent-active"><circle cx="12" cy="12" r="10" fill="#C9A86B" /></svg>
                     ) : (
-                      <svg width="24" height="24" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#E8E0D0" strokeWidth="1.5"/></svg>
+                      <svg width={isMobile ? 20 : 24} height={isMobile ? 20 : 24} viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#E8E0D0" strokeWidth="1.5" /></svg>
                     )}
                   </div>
-                  <div style={{flex:1,paddingBottom:20}}>
-                    <div style={{fontFamily:'DM Mono,monospace',fontSize:13,fontWeight:500,color:'#1A1714'}}>{step.name}</div>
-                    <div style={{fontFamily:'DM Mono,monospace',fontSize:12,color:stepDone[i]?'#6B9E78':'#9C9490',marginTop:4,lineHeight:1.5,minHeight:20}}>
+                  <div style={{ flex: 1, paddingBottom: isMobile ? 16 : 20, minWidth: 0 }}>
+                    <div style={{ fontFamily: "DM Mono,monospace", fontSize: isMobile ? 12 : 13, fontWeight: 500, color: "#1A1714" }}>{step.name}</div>
+                    <div style={{ fontFamily: "DM Mono,monospace", fontSize: isMobile ? 11 : 12, color: stepDone[i] ? "#6B9E78" : "#9C9490", marginTop: 4, lineHeight: 1.5, minHeight: 20, wordBreak: "break-word" }}>
                       {stepDone[i]
                         ? (i === 0 && productData
                           ? `${productData.mentions.toLocaleString()} ${step.done}`
@@ -464,7 +630,7 @@ export default function Pulse() {
                       {agentStep === i && !stepDone[i] && i === 0 && productData && <span style={{borderRight:'2px solid #C9A86B',marginLeft:1,animation:'pulseDot 1s infinite'}}>&nbsp;</span>}
                     </div>
                   </div>
-                  {stepDone[i] && <span style={{fontFamily:'DM Mono,monospace',fontSize:10,color:'#6B9E78',marginTop:4,whiteSpace:'nowrap'}}>✓ done</span>}
+                  {stepDone[i] && <span style={{ fontFamily: "DM Mono,monospace", fontSize: isMobile ? 9 : 10, color: "#6B9E78", marginTop: 4, whiteSpace: "nowrap" }}>✓ done</span>}
                 </div>
               ))}
               <div style={{marginTop:16,height:3,background:'#E8E0D0',borderRadius:2,overflow:'hidden'}}>
@@ -474,66 +640,83 @@ export default function Pulse() {
             </div>
           </div>
         )}
-        {screen === 'dashboard' && d && (
+        {screen === "dashboard" && d && (
           <div>
-            <div style={{position:'sticky',top:0,zIndex:10,background:'#F8F4EE',borderBottom:'1px solid #E8E0D0',height:56,display:'flex',alignItems:'center',justifyContent:'space-between',padding:'0 48px'}}>
-              <div style={{display:'flex',alignItems:'center',gap:6}}>
-                <span onClick={goHome} style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:18,cursor:'pointer'}}>pulse</span>
-                <span style={{color:'#9C9490',fontFamily:'DM Mono,monospace',fontSize:13}}>/ {productName}</span>
+            <div
+              style={{
+                position: "sticky",
+                top: 0,
+                zIndex: 10,
+                background: "#F8F4EE",
+                borderBottom: "1px solid #E8E0D0",
+                minHeight: 56,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: isMobile ? "12px 16px" : "0 48px",
+                flexWrap: "wrap",
+                gap: isMobile ? 8 : 0,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                <span onClick={goHome} style={{ fontFamily: "Syne,sans-serif", fontWeight: 700, fontSize: isMobile ? 16 : 18, cursor: "pointer" }}>pulse</span>
+                <span style={{ color: "#9C9490", fontFamily: "DM Mono,monospace", fontSize: isMobile ? 11 : 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>/ {productName}</span>
               </div>
-              <div style={{display:'flex',alignItems:'center',gap:8}}>
-                <span style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:15}}>{productName}</span>
-                <span className="pdot" style={{width:6,height:6}}/>
-                <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:'#9C9490'}}>tracking</span>
-              </div>
-              <div style={{display:'flex',gap:10}}>
-                <button onClick={goHome} style={{fontFamily:'system-ui',fontSize:13,background:'none',border:'none',cursor:'pointer',color:'#6B6560'}}>← New Product</button>
-                <button style={{padding:'6px 16px',fontSize:12,fontFamily:'system-ui',border:'1px solid #E8E0D0',borderRadius:8,background:'#FDFAF6',cursor:'pointer'}}>Export Report</button>
+              {!isSmallMobile && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontFamily: "Syne,sans-serif", fontWeight: 700, fontSize: isMobile ? 13 : 15, overflow: "hidden", textOverflow: "ellipsis", maxWidth: isMobile ? 120 : "none" }}>{productName}</span>
+                  <span className="pdot" style={{ width: 6, height: 6 }} />
+                  <span style={{ fontFamily: "DM Mono,monospace", fontSize: 11, color: "#9C9490" }}>tracking</span>
+                </div>
+              )}
+              <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                <button onClick={goHome} style={{ fontFamily: "system-ui", fontSize: isMobile ? 12 : 13, background: "none", border: "none", cursor: "pointer", color: "#6B6560", padding: "4px 0" }}>← New Product</button>
+                <button style={{ padding: "6px 12px", fontSize: isMobile ? 11 : 12, fontFamily: "system-ui", border: "1px solid #E8E0D0", borderRadius: 8, background: "#FDFAF6", cursor: "pointer" }}>Export Report</button>
               </div>
             </div>
 
-            <div style={{maxWidth:1200,margin:'0 auto',padding:'40px 48px'}}>
+            <div style={{ maxWidth: 1200, margin: "0 auto", padding: isSmallMobile ? "20px 16px" : isMobile ? "24px 20px" : "40px 48px" }}>
 
-              <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:16,marginBottom:48}}>
-                <div style={{background:'#FDFAF6',border:'1px solid #E8E0D0',borderRadius:10,padding:24}}>
-                  <div style={{fontFamily:'Syne,sans-serif',fontWeight:600,fontSize:12,textTransform:'uppercase',letterSpacing:'.5px',color:'#9C9490',marginBottom:12}}>Total Mentions</div>
-                  <div style={{fontSize:32,fontWeight:700}}><CountUp target={d.mentions}/></div>
-                  <div style={{fontFamily:'DM Mono,monospace',fontSize:11,color:'#6B9E78',marginTop:6}}>{d.mentionsDelta} vs last week</div>
+              <div style={{ display: "grid", gridTemplateColumns: isSmallMobile ? "1fr" : isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: isMobile ? 12 : 16, marginBottom: isMobile ? 32 : 48 }}>
+                <div style={{ background: "#FDFAF6", border: "1px solid #E8E0D0", borderRadius: 10, padding: isMobile ? 16 : 24 }}>
+                  <div style={{ fontFamily: "Syne,sans-serif", fontWeight: 600, fontSize: isMobile ? 11 : 12, textTransform: "uppercase", letterSpacing: ".5px", color: "#9C9490", marginBottom: isMobile ? 8 : 12 }}>Total Mentions</div>
+                  <div style={{ fontSize: isMobile ? 26 : 32, fontWeight: 700 }}><CountUp target={d.mentions} /></div>
+                  <div style={{ fontFamily: "DM Mono,monospace", fontSize: isMobile ? 10 : 11, color: "#6B9E78", marginTop: 6 }}>{d.mentionsDelta} vs last week</div>
                 </div>
-                <div style={{background:'#FDFAF6',border:'1px solid #E8E0D0',borderRadius:10,padding:24}}>
-                  <div style={{fontFamily:'Syne,sans-serif',fontWeight:600,fontSize:12,textTransform:'uppercase',letterSpacing:'.5px',color:'#9C9490',marginBottom:12}}>Fuzzy Sentiment Index</div>
-                  <div style={{height:8,borderRadius:4,display:'flex',overflow:'hidden',marginTop:10,marginBottom:10}}>
-                    <div style={{width:`${d.sentimentSplit.positive}%`,background:'#A8D8B9'}}/>
-                    <div style={{width:`${d.sentimentSplit.neutral}%`,background:'#F5D09A'}}/>
-                    <div style={{width:`${d.sentimentSplit.negative}%`,background:'#F4A8A8'}}/>
+                <div style={{ background: "#FDFAF6", border: "1px solid #E8E0D0", borderRadius: 10, padding: isMobile ? 16 : 24 }}>
+                  <div style={{ fontFamily: "Syne,sans-serif", fontWeight: 600, fontSize: isMobile ? 11 : 12, textTransform: "uppercase", letterSpacing: ".5px", color: "#9C9490", marginBottom: isMobile ? 8 : 12 }}>Fuzzy Sentiment Index</div>
+                  <div style={{ height: 8, borderRadius: 4, display: "flex", overflow: "hidden", marginTop: 10, marginBottom: 10 }}>
+                    <div style={{ width: `${d.sentimentSplit.positive}%`, background: "#A8D8B9" }} />
+                    <div style={{ width: `${d.sentimentSplit.neutral}%`, background: "#F5D09A" }} />
+                    <div style={{ width: `${d.sentimentSplit.negative}%`, background: "#F4A8A8" }} />
                   </div>
-                  <div style={{display:'flex',justifyContent:'space-between',fontFamily:'DM Mono,monospace',fontSize:11}}>
-                    <span style={{color:'#2D6A3F'}}>{d.sentimentSplit.positive}%</span>
-                    <span style={{color:'#7A5F1F'}}>{d.sentimentSplit.neutral}%</span>
-                    <span style={{color:'#7A1F1F'}}>{d.sentimentSplit.negative}%</span>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontFamily: "DM Mono,monospace", fontSize: isMobile ? 10 : 11 }}>
+                    <span style={{ color: "#2D6A3F" }}>{d.sentimentSplit.positive}%</span>
+                    <span style={{ color: "#7A5F1F" }}>{d.sentimentSplit.neutral}%</span>
+                    <span style={{ color: "#7A1F1F" }}>{d.sentimentSplit.negative}%</span>
                   </div>
                 </div>
-                <div style={{background:'#FDFAF6',border:'1px solid #E8E0D0',borderRadius:10,padding:24}}>
-                  <div style={{fontFamily:'Syne,sans-serif',fontWeight:600,fontSize:12,textTransform:'uppercase',letterSpacing:'.5px',color:'#9C9490',marginBottom:12}}>Top Signal Source</div>
-                  <div style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:24}}>{d.topChannel}</div>
-                  <div style={{fontFamily:'DM Mono,monospace',fontSize:14,color:'#9C9490',marginTop:4}}>{d.topChannelCount.toLocaleString()} mentions</div>
+                <div style={{ background: "#FDFAF6", border: "1px solid #E8E0D0", borderRadius: 10, padding: isMobile ? 16 : 24 }}>
+                  <div style={{ fontFamily: "Syne,sans-serif", fontWeight: 600, fontSize: isMobile ? 11 : 12, textTransform: "uppercase", letterSpacing: ".5px", color: "#9C9490", marginBottom: isMobile ? 8 : 12 }}>Top Signal Source</div>
+                  <div style={{ fontFamily: "Syne,sans-serif", fontWeight: 700, fontSize: isMobile ? 20 : 24 }}>{d.topChannel}</div>
+                  <div style={{ fontFamily: "DM Mono,monospace", fontSize: isMobile ? 12 : 14, color: "#9C9490", marginTop: 4 }}>{d.topChannelCount.toLocaleString()} mentions</div>
                 </div>
-                <div style={{background:'#FDFAF6',border:'1px solid #E8E0D0',borderRadius:10,padding:24}}>
-                  <div style={{fontFamily:'Syne,sans-serif',fontWeight:600,fontSize:12,textTransform:'uppercase',letterSpacing:'.5px',color:'#9C9490',marginBottom:12}}>GA-Weighted Confidence</div>
-                  <div style={{display:'flex',justifyContent:'center',marginTop:4}}><ConfidenceArc value={d.decisionConfidence} size={88}/></div>
+                <div style={{ background: "#FDFAF6", border: "1px solid #E8E0D0", borderRadius: 10, padding: isMobile ? 16 : 24 }}>
+                  <div style={{ fontFamily: "Syne,sans-serif", fontWeight: 600, fontSize: isMobile ? 11 : 12, textTransform: "uppercase", letterSpacing: ".5px", color: "#9C9490", marginBottom: isMobile ? 8 : 12 }}>GA-Weighted Confidence</div>
+                  <div style={{ display: "flex", justifyContent: "center", marginTop: 4 }}><ConfidenceArc value={d.decisionConfidence} size={isMobile ? 72 : 88} /></div>
                 </div>
               </div>
 
-              <div style={{background:'#FDFAF6',border:'1px solid #E8E0D0',borderRadius:10,padding:28,marginBottom:48}}>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
-                  <h3 style={{fontFamily:'Syne,sans-serif',fontWeight:600,fontSize:15}}>30-day sentiment pulse</h3>
-                  <div style={{display:'flex',gap:4}}>
-                    {['30d','7d','24h'].map(r=>(
-                      <button key={r} onClick={()=>setTimeRange(r)} style={{padding:'4px 12px',fontSize:11,fontFamily:'DM Mono,monospace',border:'1px solid #E8E0D0',borderRadius:6,background:timeRange===r?'#1A1714':'transparent',color:timeRange===r?'#fff':'#6B6560',cursor:'pointer'}}>{r}</button>
+              <div style={{ background: "#FDFAF6", border: "1px solid #E8E0D0", borderRadius: 10, padding: isMobile ? 16 : 28, marginBottom: isMobile ? 32 : 48 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isMobile ? 12 : 20, flexWrap: "wrap", gap: 8 }}>
+                  <h3 style={{ fontFamily: "Syne,sans-serif", fontWeight: 600, fontSize: isMobile ? 14 : 15 }}>30-day sentiment pulse</h3>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    {["30d", "7d", "24h"].map((r) => (
+                      <button key={r} onClick={() => setTimeRange(r)} style={{ padding: "4px 10px", fontSize: isMobile ? 10 : 11, fontFamily: "DM Mono,monospace", border: "1px solid #E8E0D0", borderRadius: 6, background: timeRange === r ? "#1A1714" : "transparent", color: timeRange === r ? "#fff" : "#6B6560", cursor: "pointer" }}>{r}</button>
                     ))}
                   </div>
                 </div>
-                <ResponsiveContainer width="100%" height={220}>
+                <ResponsiveContainer width="100%" height={isMobile ? 180 : 220}>
                   <AreaChart data={getTimelineData()}>
                     <CartesianGrid strokeDasharray="4 4" stroke="#F0EBE0"/>
                     <XAxis dataKey="d" tick={{fontSize:11,fontFamily:'DM Mono,monospace',fill:'#9C9490'}} axisLine={{stroke:'#E8E0D0'}} tickLine={false}/>
@@ -546,30 +729,30 @@ export default function Pulse() {
                 </ResponsiveContainer>
               </div>
 
-              <div style={{display:'flex',gap:24,marginBottom:48}}>
-                <div style={{flex:'0 0 60%',background:'#FDFAF6',border:'1px solid #E8E0D0',borderRadius:10,padding:'24px 28px'}}>
-                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
-                    <h3 style={{fontFamily:'Syne,sans-serif',fontWeight:600,fontSize:15}}>Incoming signals</h3>
-                    <span style={{fontFamily:'DM Mono,monospace',fontSize:11,background:'#F0EBE0',padding:'3px 10px',borderRadius:10,color:'#6B6560'}}>{d.mentions.toLocaleString()}</span>
+              <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? 20 : 24, marginBottom: isMobile ? 32 : 48 }}>
+                <div style={{ flex: isMobile ? "none" : "0 0 60%", width: isMobile ? "100%" : undefined, background: "#FDFAF6", border: "1px solid #E8E0D0", borderRadius: 10, padding: isMobile ? "16px 20px" : "24px 28px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isMobile ? 12 : 16, flexWrap: "wrap", gap: 8 }}>
+                    <h3 style={{ fontFamily: "Syne,sans-serif", fontWeight: 600, fontSize: isMobile ? 14 : 15 }}>Incoming signals</h3>
+                    <span style={{ fontFamily: "DM Mono,monospace", fontSize: isMobile ? 10 : 11, background: "#F0EBE0", padding: "3px 10px", borderRadius: 10, color: "#6B6560" }}>{d.mentions.toLocaleString()}</span>
                   </div>
-                  <div style={{height:340,overflow:'hidden'}}>
-                    {visibleSignals.map((s,i) => (
-                      <div key={s.key} className="sig-enter" style={{padding:'14px 0',borderBottom:'1px solid #F0EBE0',animationDelay:`${i*60}ms`}}>
-                        <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
-                          <span style={{fontFamily:'DM Mono,monospace',fontSize:12,color:'#6B6560'}}>{s.src} {s.handle}</span>
-                          <span style={{fontFamily:'DM Mono,monospace',fontSize:11,color:'#9C9490'}}>{s.time}</span>
+                  <div style={{ height: isMobile ? 280 : 340, overflow: "hidden" }}>
+                    {visibleSignals.map((s, i) => (
+                      <div key={s.key} className="sig-enter" style={{ padding: isMobile ? "10px 0" : "14px 0", borderBottom: "1px solid #F0EBE0", animationDelay: `${i * 60}ms` }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, gap: 8 }}>
+                          <span style={{ fontFamily: "DM Mono,monospace", fontSize: isMobile ? 11 : 12, color: "#6B6560", overflow: "hidden", textOverflow: "ellipsis" }}>{s.src} {s.handle}</span>
+                          <span style={{ fontFamily: "DM Mono,monospace", fontSize: isMobile ? 10 : 11, color: "#9C9490", flexShrink: 0 }}>{s.time}</span>
                         </div>
-                        <p style={{fontSize:13,lineHeight:1.5,color:'#1A1714',marginBottom:6}}>{s.text}</p>
-                        <span style={{display:'inline-block',fontFamily:'DM Mono,monospace',fontSize:10,padding:'2px 8px',borderRadius:10,background:sc[s.sentiment],color:stc[s.sentiment]}}>{s.sentiment}</span>
+                        <p style={{ fontSize: isMobile ? 12 : 13, lineHeight: 1.5, color: "#1A1714", marginBottom: 6, wordBreak: "break-word" }}>{s.text}</p>
+                        <span style={{ display: "inline-block", fontFamily: "DM Mono,monospace", fontSize: 10, padding: "2px 8px", borderRadius: 10, background: sc[s.sentiment], color: stc[s.sentiment] }}>{s.sentiment}</span>
                       </div>
                     ))}
                   </div>
                 </div>
-                <div style={{flex:1,background:'#FDFAF6',border:'1px solid #E8E0D0',borderRadius:10,padding:'24px 28px'}}>
-                  <h3 style={{fontFamily:'Syne,sans-serif',fontWeight:600,fontSize:15,marginBottom:20}}>Signal sources</h3>
-                  {Object.entries(d.sources).map(([n,p])=>(
-                    <div key={n} style={{display:'flex',alignItems:'center',gap:10,marginBottom:16}}>
-                      <span style={{fontSize:13,width:72,flexShrink:0}}>{n}</span>
+                <div style={{ flex: isMobile ? "none" : 1, width: isMobile ? "100%" : undefined, background: "#FDFAF6", border: "1px solid #E8E0D0", borderRadius: 10, padding: isMobile ? "16px 20px" : "24px 28px" }}>
+                  <h3 style={{ fontFamily: "Syne,sans-serif", fontWeight: 600, fontSize: isMobile ? 14 : 15, marginBottom: isMobile ? 16 : 20 }}>Signal sources</h3>
+                  {Object.entries(d.sources).map(([n, p]) => (
+                    <div key={n} style={{ display: "flex", alignItems: "center", gap: isMobile ? 8 : 10, marginBottom: isMobile ? 12 : 16 }}>
+                      <span style={{ fontSize: isMobile ? 12 : 13, width: isMobile ? 64 : 72, flexShrink: 0 }}>{n}</span>
                       <div style={{flex:1,height:6,background:'#F0EBE0',borderRadius:3,overflow:'hidden'}}>
                         <div style={{width:`${p}%`,height:'100%',background:'#C9A86B',borderRadius:3,transition:'width 600ms ease'}}/>
                       </div>
@@ -579,11 +762,11 @@ export default function Pulse() {
                   <p style={{fontSize:12,fontStyle:'italic',color:'#9C9490',marginTop:20,lineHeight:1.5}}>Neural retrieval weights each source by semantic relevance to product category</p>
                 </div>
               </div>
-              <div style={{marginBottom:48}}>
-                <h3 style={{fontFamily:'Syne,sans-serif',fontWeight:600,fontSize:15}}>How Pulse thinks</h3>
-                <p style={{fontSize:13,color:'#9C9490',marginBottom:20,marginTop:4}}>Three models running in parallel</p>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20}}>
-                  <div style={{background:'#FDFAF6',border:'1px solid #E8E0D0',borderLeft:'3px solid #6B9E78',borderRadius:10,padding:24,opacity:cardsVisible?1:0,transition:'opacity 400ms ease',transitionDelay:'0ms'}}>
+              <div style={{ marginBottom: isMobile ? 32 : 48 }}>
+                <h3 style={{ fontFamily: "Syne,sans-serif", fontWeight: 600, fontSize: isMobile ? 14 : 15 }}>How Pulse thinks</h3>
+                <p style={{ fontSize: isMobile ? 12 : 13, color: "#9C9490", marginBottom: isMobile ? 16 : 20, marginTop: 4 }}>Three models running in parallel</p>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: isMobile ? 16 : 20 }}>
+                  <div style={{ background: "#FDFAF6", border: "1px solid #E8E0D0", borderLeft: "3px solid #6B9E78", borderRadius: 10, padding: isMobile ? 16 : 24, opacity: cardsVisible ? 1 : 0, transition: "opacity 400ms ease", transitionDelay: "0ms" }}>
                     <h4 style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:14}}>Fuzzy Logic</h4>
                     <p style={{fontFamily:'DM Mono,monospace',fontSize:11,color:'#9C9490',marginBottom:16,marginTop:2}}>Signal Reconciliation</p>
                     {Object.entries(d.fuzzy).map(([k,v])=>(
@@ -602,9 +785,9 @@ export default function Pulse() {
                       <div style={{display:'flex',justifyContent:'space-between',fontFamily:'DM Mono,monospace',fontSize:10,color:'#9C9490'}}><span>Strongly Negative</span><span>Strongly Positive</span></div>
                       <p style={{fontFamily:'DM Mono,monospace',fontSize:12,color:'#6B9E78',marginTop:8}}>{'\u03BC'} = {d.fuzzyOutput.mu} · {d.fuzzyOutput.label}</p>
                     </div>
-                    <p style={{fontSize:11,fontStyle:'italic',color:'#9C9490',borderTop:'1px solid #F0EBE0',paddingTop:12,marginTop:12,lineHeight:1.5}}>Handles contradictory signals using partial truth membership — not binary classification</p>
+                    <p style={{ fontSize: isMobile ? 10 : 11, fontStyle: "italic", color: "#9C9490", borderTop: "1px solid #F0EBE0", paddingTop: 12, marginTop: 12, lineHeight: 1.5 }}>Handles contradictory signals using partial truth membership — not binary classification</p>
                   </div>
-                  <div style={{background:'#FDFAF6',border:'1px solid #E8E0D0',borderLeft:'3px solid #7B8FD4',borderRadius:10,padding:24,opacity:cardsVisible?1:0,transition:'opacity 400ms ease',transitionDelay:'100ms'}}>
+                  <div style={{ background: "#FDFAF6", border: "1px solid #E8E0D0", borderLeft: "3px solid #7B8FD4", borderRadius: 10, padding: isMobile ? 16 : 24, opacity: cardsVisible ? 1 : 0, transition: "opacity 400ms ease", transitionDelay: "100ms" }}>
                     <h4 style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:14}}>Neural Retrieval</h4>
                     <p style={{fontFamily:'DM Mono,monospace',fontSize:11,color:'#9C9490',marginBottom:16,marginTop:2}}>Semantic Clustering</p>
                     <svg width="100%" viewBox="0 0 200 180" style={{background:'#F8F4EE',borderRadius:8,marginBottom:12}}>
@@ -618,9 +801,9 @@ export default function Pulse() {
                       })}
                     </svg>
                     <p style={{fontFamily:'DM Mono,monospace',fontSize:12,color:'#7B8FD4'}}>Top signal: {d.clusterSignal}</p>
-                    <p style={{fontSize:11,fontStyle:'italic',color:'#9C9490',borderTop:'1px solid #F0EBE0',paddingTop:12,marginTop:12,lineHeight:1.5}}>Embedding-based semantic grouping of {d.mentions.toLocaleString()} mentions into decision-relevant themes</p>
+                    <p style={{ fontSize: isMobile ? 10 : 11, fontStyle: "italic", color: "#9C9490", borderTop: "1px solid #F0EBE0", paddingTop: 12, marginTop: 12, lineHeight: 1.5 }}>Embedding-based semantic grouping of {d.mentions.toLocaleString()} mentions into decision-relevant themes</p>
                   </div>
-                  <div style={{background:'#FDFAF6',border:'1px solid #E8E0D0',borderLeft:'3px solid #C9A86B',borderRadius:10,padding:24,opacity:cardsVisible?1:0,transition:'opacity 400ms ease',transitionDelay:'200ms'}}>
+                  <div style={{ background: "#FDFAF6", border: "1px solid #E8E0D0", borderLeft: "3px solid #C9A86B", borderRadius: 10, padding: isMobile ? 16 : 24, opacity: cardsVisible ? 1 : 0, transition: "opacity 400ms ease", transitionDelay: "200ms" }}>
                     <h4 style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:14}}>Genetic Algorithm</h4>
                     <p style={{fontFamily:'DM Mono,monospace',fontSize:11,color:'#9C9490',marginBottom:16,marginTop:2}}>Decision Evolution</p>
                     {d.gaOpps.map((o,i)=>(
@@ -633,26 +816,26 @@ export default function Pulse() {
                       </div>
                     ))}
                     <p style={{fontFamily:'DM Mono,monospace',fontSize:10,color:'#9C9490',marginTop:8}}>{d.gaParams}</p>
-                    <p style={{fontSize:11,fontStyle:'italic',color:'#9C9490',borderTop:'1px solid #F0EBE0',paddingTop:12,marginTop:12,lineHeight:1.5}}>Evolves feature priorities by selecting, crossing, and mutating candidate decisions across generations</p>
+                    <p style={{ fontSize: isMobile ? 10 : 11, fontStyle: "italic", color: "#9C9490", borderTop: "1px solid #F0EBE0", paddingTop: 12, marginTop: 12, lineHeight: 1.5 }}>Evolves feature priorities by selecting, crossing, and mutating candidate decisions across generations</p>
                   </div>
                 </div>
               </div>
-              <div style={{marginBottom:48}}>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:20}}>
-                  <h3 style={{fontFamily:'Syne,sans-serif',fontWeight:600,fontSize:15}}>Active decisions</h3>
-                  <button style={{padding:'8px 16px',fontSize:12,fontFamily:'Syne,sans-serif',fontWeight:600,border:'1px solid #E8E0D0',borderRadius:8,background:'transparent',cursor:'pointer',color:'#6B6560'}}>+ New Decision</button>
+              <div style={{ marginBottom: isMobile ? 32 : 48 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: isMobile ? 16 : 20, flexWrap: "wrap", gap: 8 }}>
+                  <h3 style={{ fontFamily: "Syne,sans-serif", fontWeight: 600, fontSize: isMobile ? 14 : 15 }}>Active decisions</h3>
+                  <button style={{ padding: "6px 12px", fontSize: isMobile ? 11 : 12, fontFamily: "Syne,sans-serif", fontWeight: 600, border: "1px solid #E8E0D0", borderRadius: 8, background: "transparent", cursor: "pointer", color: "#6B6560" }}>+ New Decision</button>
                 </div>
-                <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:20}}>
-                  {d.decisions.map((dc,i)=>(
-                    <div key={i} style={{background:'#FDFAF6',border:'1px solid #E8E0D0',borderRadius:10,padding:24,display:'flex',flexDirection:'column'}}>
-                      <span style={{display:'inline-block',alignSelf:'flex-start',fontFamily:'DM Mono,monospace',fontSize:10,textTransform:'uppercase',padding:'3px 10px',borderRadius:10,background:statusBg[dc.status],color:statusTc[dc.status]}}>{dc.status}</span>
-                      <h4 style={{fontFamily:'Syne,sans-serif',fontWeight:700,fontSize:15,lineHeight:1.4,marginTop:10}}>{dc.question}</h4>
-                      <div style={{marginTop:16,fontSize:13,lineHeight:2}}>
-                        <div style={{borderBottom:'1px solid #F0EBE0',paddingBottom:6,marginBottom:6,display:'flex',justifyContent:'space-between'}}><span style={{fontFamily:'DM Mono,monospace',fontSize:10,textTransform:'uppercase',color:'#9C9490'}}>Evidence</span><span>{dc.evidence}</span></div>
-                        <div style={{borderBottom:'1px solid #F0EBE0',paddingBottom:6,marginBottom:6,display:'flex',justifyContent:'space-between',gap:12}}><span style={{fontFamily:'DM Mono,monospace',fontSize:10,textTransform:'uppercase',color:'#9C9490',flexShrink:0}}>Assumption</span><span style={{textAlign:'right'}}>{dc.assumption}</span></div>
-                        <div style={{display:'flex',justifyContent:'space-between',gap:12}}><span style={{fontFamily:'DM Mono,monospace',fontSize:10,textTransform:'uppercase',color:'#9C9490',flexShrink:0}}>Success Metric</span><span style={{textAlign:'right'}}>{dc.metric}</span></div>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: isMobile ? 16 : 20 }}>
+                  {d.decisions.map((dc, i) => (
+                    <div key={i} style={{ background: "#FDFAF6", border: "1px solid #E8E0D0", borderRadius: 10, padding: isMobile ? 16 : 24, display: "flex", flexDirection: "column" }}>
+                      <span style={{ display: "inline-block", alignSelf: "flex-start", fontFamily: "DM Mono,monospace", fontSize: 10, textTransform: "uppercase", padding: "3px 10px", borderRadius: 10, background: statusBg[dc.status], color: statusTc[dc.status] }}>{dc.status}</span>
+                      <h4 style={{ fontFamily: "Syne,sans-serif", fontWeight: 700, fontSize: isMobile ? 14 : 15, lineHeight: 1.4, marginTop: 10, wordBreak: "break-word" }}>{dc.question}</h4>
+                      <div style={{ marginTop: isMobile ? 12 : 16, fontSize: isMobile ? 12 : 13, lineHeight: 2 }}>
+                        <div style={{ borderBottom: "1px solid #F0EBE0", paddingBottom: 6, marginBottom: 6, display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 4 }}><span style={{ fontFamily: "DM Mono,monospace", fontSize: 10, textTransform: "uppercase", color: "#9C9490" }}>Evidence</span><span>{dc.evidence}</span></div>
+                        <div style={{ borderBottom: "1px solid #F0EBE0", paddingBottom: 6, marginBottom: 6, display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><span style={{ fontFamily: "DM Mono,monospace", fontSize: 10, textTransform: "uppercase", color: "#9C9490", flexShrink: 0 }}>Assumption</span><span style={{ textAlign: "right", wordBreak: "break-word" }}>{dc.assumption}</span></div>
+                        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><span style={{ fontFamily: "DM Mono,monospace", fontSize: 10, textTransform: "uppercase", color: "#9C9490", flexShrink: 0 }}>Success Metric</span><span style={{ textAlign: "right", wordBreak: "break-word" }}>{dc.metric}</span></div>
                       </div>
-                      <div style={{display:'flex',justifyContent:'center',margin:'16px 0'}}><ConfidenceArc value={dc.confidence} size={80}/></div>
+                      <div style={{ display: "flex", justifyContent: "center", margin: isMobile ? "12px 0" : "16px 0" }}><ConfidenceArc value={dc.confidence} size={isMobile ? 64 : 80} /></div>
                       <div style={{borderTop:'1px solid #F0EBE0',paddingTop:10,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
                         <span style={{fontSize:11,fontStyle:'italic',color:'#9C9490'}}>AI Drafted · Pending Human Approval</span>
                         <span style={{fontFamily:'DM Mono,monospace',fontSize:10,color:'#9C9490'}}>Feb 27, 2026</span>
@@ -662,13 +845,13 @@ export default function Pulse() {
                 </div>
               </div>
 
-              <div style={{background:'#F5EFE4',border:'1px solid #E0D5C5',borderRadius:10,padding:'28px 32px'}}>
-                <h3 style={{fontFamily:'Syne,sans-serif',fontWeight:600,fontSize:15}}>Agentic Decision Brief</h3>
-                <p style={{fontSize:13,color:'#9C9490',marginTop:4,marginBottom:20}}>Generated by Pulse AI · Fuzzy + Neural + Genetic synthesis</p>
-                <p style={{fontFamily:'Lora,serif',fontStyle:'italic',fontSize:14,color:'#1A1714',lineHeight:1.8,marginBottom:24}}>{d.rationale}</p>
-                <div style={{display:'flex',gap:10}}>
-                  <button style={{padding:'10px 20px',fontSize:12,fontFamily:'system-ui',fontWeight:500,border:'none',borderRadius:8,background:'#6B9E78',color:'#fff',cursor:'pointer'}}>Approve & Log Decision</button>
-                  <button style={{padding:'10px 20px',fontSize:12,fontFamily:'system-ui',border:'1px solid #E0D5C5',borderRadius:8,background:'transparent',cursor:'pointer',color:'#6B6560'}}>Request AI Revision</button>
+              <div style={{ background: "#F5EFE4", border: "1px solid #E0D5C5", borderRadius: 10, padding: isMobile ? "20px 16px" : "28px 32px" }}>
+                <h3 style={{ fontFamily: "Syne,sans-serif", fontWeight: 600, fontSize: isMobile ? 14 : 15 }}>Agentic Decision Brief</h3>
+                <p style={{ fontSize: isMobile ? 12 : 13, color: "#9C9490", marginTop: 4, marginBottom: isMobile ? 12 : 20 }}>Generated by Pulse AI · Fuzzy + Neural + Genetic synthesis</p>
+                <p style={{ fontFamily: "Lora,serif", fontStyle: "italic", fontSize: isMobile ? 13 : 14, color: "#1A1714", lineHeight: 1.8, marginBottom: isMobile ? 16 : 24, wordBreak: "break-word" }}>{d.rationale}</p>
+                <div style={{ display: "flex", flexDirection: isSmallMobile ? "column" : "row", gap: 10 }}>
+                  <button style={{ padding: isMobile ? "10px 16px" : "10px 20px", fontSize: isMobile ? 11 : 12, fontFamily: "system-ui", fontWeight: 500, border: "none", borderRadius: 8, background: "#6B9E78", color: "#fff", cursor: "pointer", width: isSmallMobile ? "100%" : undefined }}>Approve & Log Decision</button>
+                  <button style={{ padding: isMobile ? "10px 16px" : "10px 20px", fontSize: isMobile ? 11 : 12, fontFamily: "system-ui", border: "1px solid #E0D5C5", borderRadius: 8, background: "transparent", cursor: "pointer", color: "#6B6560", width: isSmallMobile ? "100%" : undefined }}>Request AI Revision</button>
                 </div>
               </div>
 
